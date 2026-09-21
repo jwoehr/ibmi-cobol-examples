@@ -13,6 +13,7 @@
       *
       * Controls:
       *   F3       - Exit
+      *   F5       - Next Topic (cycles through available topics)
       *   PgDn     - Scroll down one page
       *   PgUp     - Scroll up one page
       *
@@ -29,7 +30,8 @@
        SOURCE-COMPUTER. IBM-I.
        OBJECT-COMPUTER. IBM-I.
        SPECIAL-NAMES.
-           LINKAGE TYPE IS PROCEDURE FOR 'COBINFOSRV'.
+           LINKAGE TYPE IS PROCEDURE FOR 'COBINFOSRV'
+           LINKAGE TYPE IS PROCEDURE FOR 'COBVERBS'.
        INPUT-OUTPUT SECTION.
        FILE-CONTROL.
            SELECT COBSCRF
@@ -47,16 +49,20 @@
        01  WS-SCR-STATUS          PIC XX.
 
       *--------------------------------------------------------------
-      * Response indicator area - 3 bytes, matching DDS listing:
-      *   *IN03 = byte 1  (CA03  - F3 Exit)
-      *   *IN25 = byte 2  (PAGEDOWN - scroll down)
-      *   *IN26 = byte 3  (PAGEUP   - scroll up)
+      * Response indicator area - 4 bytes, matching DDS keyword order:
+      *   Byte 1: *IN03 (CA03  - F3 Exit)
+      *   Byte 2: *IN25 (PAGEDOWN - scroll down)
+      *   Byte 3: *IN26 (PAGEUP   - scroll up)
+      *   Byte 4: *IN05 (CA05  - F5 Next Topic)
       * Each byte is '1' (on) or '0' (off).
+      * DDS keyword order: CA03, PAGEDOWN, PAGEUP, CA05.
+      * A future CA06 would become byte 5 with no renumbering.
       *--------------------------------------------------------------
        01  WS-IND-AREA.
            05  WS-IND-F3          PIC X.
            05  WS-IND-PGDN        PIC X.
            05  WS-IND-PGUP        PIC X.
+           05  WS-IND-F5          PIC X.
 
       *--------------------------------------------------------------
       * Scrolling state
@@ -74,6 +80,14 @@
        77  WS-TOTAL-EDIT          PIC ZZ9.
 
       *--------------------------------------------------------------
+      * Topic cycling state
+      * WS-TOPIC-IDX: 1 = COBOL PICTURE Clauses, 2 = COBOL Verbs
+      * WS-TOPIC-MAX: total number of available topics
+      *--------------------------------------------------------------
+       77  WS-TOPIC-IDX           PIC 9  COMP-4 VALUE 1.
+       77  WS-TOPIC-MAX           PIC 9  COMP-4 VALUE 2.
+
+      *--------------------------------------------------------------
       * Screen output work fields
       *--------------------------------------------------------------
        01  WS-SCR-WORK.
@@ -87,19 +101,17 @@
       *--------------------------------------------------------------
       * Topic group item - interface contract with COBINFOSRV.
       * Identical layout to LINKAGE SECTION in cobinfosrv.cblle.
-      * PICCLAUS-DATA fills WS-TOPIC-COUNT and WS-ENTRY(1..60).
+      * WS-ENTRY array expanded to 120 to support larger topics.
       *--------------------------------------------------------------
        01  WS-TOPIC.
            05  WS-TOPIC-COUNT     PIC 9(3)  COMP-4.
            05  WS-ENTRY           PIC X(77)
-               OCCURS 60 TIMES.
+               OCCURS 120 TIMES.
 
        PROCEDURE DIVISION.
        MAIN-SECTION SECTION.
        MAIN-PARA.
-           MOVE 'COBOL PICTURE Clauses' TO WS-HDRTOPIC
-           CALL 'COBINFOSRV' USING BY REFERENCE WS-TOPIC
-           MOVE WS-TOPIC-COUNT TO WS-TOTAL-LINES
+           PERFORM LOAD-TOPIC
            PERFORM CALC-PAGES
            PERFORM OPEN-SCREEN
            PERFORM SCROLL-LOOP UNTIL WS-IND-F3 = '1'
@@ -137,6 +149,8 @@
                    PERFORM PAGE-DOWN
                WHEN WS-IND-PGUP = '1'
                    PERFORM PAGE-UP
+               WHEN WS-IND-F5   = '1'
+                   PERFORM NEXT-TOPIC
                WHEN OTHER
                    CONTINUE
            END-EVALUATE.
@@ -172,6 +186,37 @@
            END-IF.
 
       *--------------------------------------------------------------
+      * Next topic: advance topic index (wraps around), reload data.
+      *--------------------------------------------------------------
+       NEXT-TOPIC.
+           ADD 1 TO WS-TOPIC-IDX
+           IF WS-TOPIC-IDX > WS-TOPIC-MAX
+               MOVE 1 TO WS-TOPIC-IDX
+           END-IF
+           MOVE 1      TO WS-TOP-LINE
+           MOVE SPACES TO WS-MSGFLD
+           PERFORM LOAD-TOPIC
+           PERFORM CALC-PAGES.
+
+      *--------------------------------------------------------------
+      * Load topic data: call the appropriate service procedure based
+      * on WS-TOPIC-IDX, then set the header and total-lines count.
+      *--------------------------------------------------------------
+       LOAD-TOPIC.
+           EVALUATE WS-TOPIC-IDX
+               WHEN 1
+                   CALL 'COBINFOSRV' USING BY REFERENCE WS-TOPIC
+                   MOVE 'COBOL PICTURE Clauses'  TO WS-HDRTOPIC
+               WHEN 2
+                   CALL 'COBVERBS'   USING BY REFERENCE WS-TOPIC
+                   MOVE 'COBOL Verbs'             TO WS-HDRTOPIC
+               WHEN OTHER
+                   CALL 'COBINFOSRV' USING BY REFERENCE WS-TOPIC
+                   MOVE 'COBOL PICTURE Clauses'  TO WS-HDRTOPIC
+           END-EVALUATE
+           MOVE WS-TOPIC-COUNT TO WS-TOTAL-LINES.
+
+      *--------------------------------------------------------------
       * Calculate total pages from total lines and page size
       *--------------------------------------------------------------
        CALC-PAGES.
@@ -203,8 +248,7 @@
 
       *--------------------------------------------------------------
       * Write the screen record to the display file.
-      * WS-HDRTOPIC was set in MAIN-PARA and remains constant for
-      * this topic; future topics will change it before calling here.
+      * WS-HDRTOPIC is set by LOAD-TOPIC for the current topic.
       *--------------------------------------------------------------
        WRITE-SCREEN.
            MOVE WS-HDRTOPIC  TO HDRTOPIC OF COBSCR-REC
@@ -234,6 +278,8 @@
       *--------------------------------------------------------------
       * Read the screen; INDICATORS ARE receives the response
       * indicator bytes back from the display file.
+      * Byte order matches DDS keyword declaration order:
+      *   CA03=byte1, PAGEDOWN=byte2, PAGEUP=byte3, CA05=byte4.
       *--------------------------------------------------------------
        READ-SCREEN.
            READ COBSCRF FORMAT IS 'COBSCR'
@@ -242,4 +288,4 @@
                    MOVE '1' TO WS-IND-F3
            END-READ.
 
-       END PROGRAM COBOLINFO.
+        END PROGRAM COBOLINFO.

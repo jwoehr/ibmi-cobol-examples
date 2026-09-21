@@ -13,9 +13,9 @@
       * be used as ILE export symbols.
       *
       * Interface contract (BY REFERENCE group item WS-TOPIC):
-      *   WS-TOPIC-COUNT  PIC 9(3) COMP-4   - number of entries filled
-      *   WS-ENTRY(1..60) PIC X(77)          - each entry is:
-      *       first 27 chars: PIC clause example
+      *   WS-TOPIC-COUNT   PIC 9(3) COMP-4   - number of entries filled
+      *   WS-ENTRY(1..120) PIC X(77)          - each entry is:
+      *       first 27 chars: example / verb name
       *       last  50 chars: description
       *
       * Compile:   CRTCBLMOD MODULE(lib/COBINFOSRV)
@@ -54,7 +54,7 @@
        01  WS-TOPIC.
            05  WS-TOPIC-COUNT     PIC 9(3)  COMP-4.
            05  WS-ENTRY           PIC X(77)
-               OCCURS 60 TIMES.
+               OCCURS 120 TIMES.
 
        PROCEDURE DIVISION USING BY REFERENCE WS-TOPIC.
        MAIN-PARA.
@@ -294,3 +294,421 @@
            GOBACK.
 
        END PROGRAM COBINFOSRV.
+
+      *==============================================================
+      * COBVERBS - ILE COBOL Service Program: COBOL Verb Reference
+      *
+      * Exported ILE procedure symbol: COBVERBS  (the PROGRAM-ID)
+      *
+      * Interface contract (BY REFERENCE group item WS-TOPIC):
+      *   WS-TOPIC-COUNT   PIC 9(3) COMP-4   - number of entries filled
+      *   WS-ENTRY(1..120) PIC X(77)          - each entry is:
+      *       first 27 chars: verb name / indented example
+      *       last  50 chars: description / usage note
+      *
+      * Entry layout uses two-line pairs per verb:
+      *   Line 1: WS-EX = verb name, WS-DC = short description
+      *   Line 2: WS-EX = indented example, WS-DC = usage note
+      *==============================================================
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. COBVERBS.
+       AUTHOR.     BOB.
+       DATE-WRITTEN. 2025.
+
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       SOURCE-COMPUTER. IBM-I.
+       OBJECT-COMPUTER. IBM-I.
+
+       DATA DIVISION.
+
+      *--------------------------------------------------------------
+      * WORKING-STORAGE - load helper, private to this module.
+      * WS-LOAD combines a 27-char example and 50-char description
+      * into one 77-char item, then MOVEd into the caller's array.
+      *--------------------------------------------------------------
+       WORKING-STORAGE SECTION.
+       01  WS-LOAD.
+           05  WS-EX              PIC X(27).
+           05  WS-DC              PIC X(50).
+
+      *--------------------------------------------------------------
+      * LINKAGE SECTION - group item passed BY REFERENCE from the
+      * calling program (COBOLINFO).  Caller owns the storage;
+      * this program fills it.  Caller must declare identical layout.
+      *--------------------------------------------------------------
+       LINKAGE SECTION.
+       01  WS-TOPIC.
+           05  WS-TOPIC-COUNT     PIC 9(3)  COMP-4.
+           05  WS-ENTRY           PIC X(77)
+               OCCURS 120 TIMES.
+
+       PROCEDURE DIVISION USING BY REFERENCE WS-TOPIC.
+       MAIN-PARA.
+           MOVE 114 TO WS-TOPIC-COUNT
+
+      *-- Data Movement --
+           MOVE '--- Data Movement ----------' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(1)
+           MOVE 'MOVE' TO WS-EX
+           MOVE 'Copy a value to a receiving field.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(2)
+           MOVE '  MOVE WS-SRC TO WS-DEST' TO WS-EX
+           MOVE 'Source/dest types must be compatible.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(3)
+           MOVE 'INITIALIZE' TO WS-EX
+           MOVE 'Set data items to default values.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(4)
+           MOVE '  INITIALIZE WS-RECORD' TO WS-EX
+           MOVE 'Numerics 0; alphanumerics spaces.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(5)
+           MOVE 'SET' TO WS-EX
+           MOVE 'Assign index, pointer, or 88-level.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(6)
+           MOVE '  SET WS-IDX TO 1' TO WS-EX
+           MOVE 'Also: SET cond-name TO TRUE.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(7)
+           MOVE 'STRING' TO WS-EX
+           MOVE 'Concatenate strings into one field.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(8)
+           MOVE '  STRING A DELIMITED SIZE IN' TO WS-EX
+           MOVE 'POINTER tracks position in target.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(9)
+           MOVE 'UNSTRING' TO WS-EX
+           MOVE 'Split a string into multiple fields.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(10)
+           MOVE '  UNSTRING B DELIM '','' INTO' TO WS-EX
+           MOVE 'TALLYING counts substrings found.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(11)
+
+      *-- Arithmetic --
+           MOVE '--- Arithmetic --------------' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(12)
+           MOVE 'ADD' TO WS-EX
+           MOVE 'Add one or more values together.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(13)
+           MOVE '  ADD TAX TO TOTAL' TO WS-EX
+           MOVE 'ON SIZE ERROR catches overflow.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(14)
+           MOVE 'SUBTRACT' TO WS-EX
+           MOVE 'Subtract values from a receiving field.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(15)
+           MOVE '  SUBTRACT DISC FROM PRICE' TO WS-EX
+           MOVE 'GIVING stores result in separate item.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(16)
+           MOVE 'MULTIPLY' TO WS-EX
+           MOVE 'Multiply two values.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(17)
+           MOVE '  MULTIPLY QTY BY PRICE GIVE' TO WS-EX
+           MOVE 'Use ROUNDED to round the result.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(18)
+           MOVE 'DIVIDE' TO WS-EX
+           MOVE 'Divide; optionally keep remainder.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(19)
+           MOVE '  DIVIDE TOT BY CNT GIVING A' TO WS-EX
+           MOVE 'REMAINDER clause captures the modulus.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(20)
+           MOVE 'COMPUTE' TO WS-EX
+           MOVE 'Evaluate an arithmetic expression.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(21)
+           MOVE '  COMPUTE NET=GROSS-GROSS*TX' TO WS-EX
+           MOVE 'Supports +, -, *, /, ** (power).' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(22)
+
+      *-- Control Flow --
+           MOVE '--- Control Flow ------------' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(23)
+           MOVE 'PERFORM' TO WS-EX
+           MOVE 'Execute a paragraph or inline loop.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(24)
+           MOVE '  PERFORM P UNTIL FLAG=''Y''' TO WS-EX
+           MOVE 'VARYING and TIMES forms also valid.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(25)
+           MOVE 'IF / ELSE / END-IF' TO WS-EX
+           MOVE 'Conditional branch on a boolean test.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(26)
+           MOVE '  IF AMT>0...ELSE...END-IF' TO WS-EX
+           MOVE 'Nest IFs freely; always use END-IF.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(27)
+           MOVE 'EVALUATE' TO WS-EX
+           MOVE 'Multi-way branch; replaces nested IFs.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(28)
+           MOVE '  EVALUATE CODE WHEN X...OTH' TO WS-EX
+           MOVE 'EVALUATE TRUE...WHEN cond is valid.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(29)
+           MOVE 'GO TO' TO WS-EX
+           MOVE 'Unconditional branch to a paragraph.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(30)
+           MOVE '  GO TO END-PARA' TO WS-EX
+           MOVE 'Prefer PERFORM or EVALUATE instead.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(31)
+           MOVE 'STOP RUN' TO WS-EX
+           MOVE 'End execution and return to caller.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(32)
+           MOVE '  STOP RUN' TO WS-EX
+           MOVE 'Ends the activation group (ILE).' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(33)
+
+      *-- Input/Output --
+           MOVE '--- Input / Output ----------' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(34)
+           MOVE 'OPEN' TO WS-EX
+           MOVE 'Open a file before reading or writing.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(35)
+           MOVE '  OPEN INPUT CUSTOMER-FILE' TO WS-EX
+           MOVE 'Modes: INPUT OUTPUT I-O EXTEND.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(36)
+           MOVE 'CLOSE' TO WS-EX
+           MOVE 'Close a file when processing is done.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(37)
+           MOVE '  CLOSE CUSTOMER-FILE' TO WS-EX
+           MOVE 'Always close files before GOBACK.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(38)
+           MOVE 'READ' TO WS-EX
+           MOVE 'Read next or keyed record from file.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(39)
+           MOVE '  READ F NEXT AT END MOVE Y' TO WS-EX
+           MOVE 'Use KEY IS for random keyed access.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(40)
+           MOVE 'WRITE' TO WS-EX
+           MOVE 'Write a new record to a file.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(41)
+           MOVE '  WRITE REC INVK PERFORM ERR' TO WS-EX
+           MOVE 'BEFORE/AFTER ADVANCING for printers.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(42)
+           MOVE 'REWRITE' TO WS-EX
+           MOVE 'Update an existing record in-place.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(43)
+           MOVE '  REWRITE REC INVK KEY PRFRM' TO WS-EX
+           MOVE 'File open I-O; record must exist.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(44)
+           MOVE 'DELETE' TO WS-EX
+           MOVE 'Remove a record from an indexed file.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(45)
+           MOVE '  DELETE CUST-FILE RECORD' TO WS-EX
+           MOVE 'Must have been read in dynamic mode.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(46)
+
+      *-- Table Handling --
+           MOVE '--- Table Handling ----------' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(47)
+           MOVE 'SEARCH' TO WS-EX
+           MOVE 'Serial search of a table (OCCURS).' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(48)
+           MOVE '  SEARCH TBL AT END WHEN...' TO WS-EX
+           MOVE 'Index incremented automatically.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(49)
+           MOVE 'SEARCH ALL' TO WS-EX
+           MOVE 'Binary search; requires sorted table.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(50)
+           MOVE '  SEARCH ALL TBL WHEN K=VAL' TO WS-EX
+           MOVE 'Table sorted on ASCENDING/DESCENDING KEY.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(51)
+           MOVE 'SORT' TO WS-EX
+           MOVE 'Sort records in a file or table.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(52)
+           MOVE '  SORT SF ASCENDING KEY FLD' TO WS-EX
+           MOVE 'INPUT/OUTPUT PROCEDURE for custom logic.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(53)
+           MOVE 'MERGE' TO WS-EX
+           MOVE 'Merge two or more sorted files.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(54)
+           MOVE '  MERGE MF ASCENDING KEY FLD' TO WS-EX
+           MOVE 'Requires OUTPUT PROCEDURE or GIVING.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(55)
+
+      *-- Program Linkage --
+           MOVE '--- Program Linkage ---------' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(56)
+           MOVE 'CALL' TO WS-EX
+           MOVE 'Transfer control to another program.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(57)
+           MOVE '  CALL ''P'' USING BY REF PARM' TO WS-EX
+           MOVE 'BY VALUE copies; BY REF shares storage.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(58)
+           MOVE 'CANCEL' TO WS-EX
+           MOVE 'Release storage of a called program.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(59)
+           MOVE '  CANCEL ''PROGNAME''' TO WS-EX
+           MOVE 'Next CALL re-initializes the program.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(60)
+           MOVE 'GOBACK' TO WS-EX
+           MOVE 'Return to immediate caller.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(61)
+           MOVE '  GOBACK' TO WS-EX
+           MOVE 'Preferred over STOP RUN in ILE.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(62)
+           MOVE 'EXIT PROGRAM' TO WS-EX
+           MOVE 'Return from a called COBOL subprogram.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(63)
+           MOVE '  EXIT PROGRAM' TO WS-EX
+           MOVE 'No-op in main program; use GOBACK.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(64)
+
+      *-- Exception / Debug --
+           MOVE '--- Exception / Debug -------' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(65)
+           MOVE 'INSPECT' TO WS-EX
+           MOVE 'Scan/count/replace chars in a field.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(66)
+           MOVE '  INSPECT F TALLYING FOR ALL' TO WS-EX
+           MOVE 'CONVERTING replaces sets of chars.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(67)
+           MOVE 'ON EXCEPTION' TO WS-EX
+           MOVE 'Handle error on a CALL statement.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(68)
+           MOVE '  CALL ''P'' ON EXCEPTION PERF' TO WS-EX
+           MOVE 'Fires when called pgm not found.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(69)
+           MOVE 'ON SIZE ERROR' TO WS-EX
+           MOVE 'Catch arithmetic overflow or div/0.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(70)
+           MOVE '  COMPUTE X=A/B ON SZE ERR' TO WS-EX
+           MOVE 'Also: ADD SUBTRACT MULTIPLY DIVIDE.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(71)
+           MOVE 'DISPLAY' TO WS-EX
+           MOVE 'Write to job log or system console.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(72)
+           MOVE '  DISPLAY ''Val: '' WS-AMOUNT' TO WS-EX
+           MOVE 'Outputs to QSYSOPR/job log.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(73)
+
+      *-- String Handling --
+           MOVE '--- String Handling ---------' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(74)
+           MOVE 'MOVE SPACES' TO WS-EX
+           MOVE 'Clear an alphanumeric field to spaces.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(75)
+           MOVE '  MOVE SPACES TO WS-NAME' TO WS-EX
+           MOVE 'Like INITIALIZE for alpha-only items.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(76)
+           MOVE 'MOVE ZEROS' TO WS-EX
+           MOVE 'Set a numeric field to zero.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(77)
+           MOVE '  MOVE ZEROS TO WS-COUNTER' TO WS-EX
+           MOVE 'ZEROES and ZERO are synonyms.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(78)
+           MOVE 'MOVE CORRESPONDING' TO WS-EX
+           MOVE 'Copy matching-name fields between groups.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(79)
+           MOVE '  MOVE CORR SRC TO DST-GROUP' TO WS-EX
+           MOVE 'Only same-named fields are moved.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(80)
+
+      *-- Scope Terminators --
+           MOVE '--- Scope Terminators -------' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(81)
+           MOVE 'END-IF' TO WS-EX
+           MOVE 'Terminate an IF statement explicitly.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(82)
+           MOVE '  IF X > 0 PERFORM A END-IF' TO WS-EX
+           MOVE 'Preferred over period-termination.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(83)
+           MOVE 'END-EVALUATE' TO WS-EX
+           MOVE 'Terminate an EVALUATE statement.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(84)
+           MOVE '  EVALUATE TRUE WHEN END-EV' TO WS-EX
+           MOVE 'Required in nested EVALUATE blocks.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(85)
+           MOVE 'END-PERFORM' TO WS-EX
+           MOVE 'Terminate an inline PERFORM loop.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(86)
+           MOVE '  PERFORM UNTIL END-PERFORM' TO WS-EX
+           MOVE 'Body between PERFORM and END-PERFORM.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(87)
+           MOVE 'END-READ' TO WS-EX
+           MOVE 'Terminate a READ statement.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(88)
+           MOVE '  READ F AT END NOT AT END' TO WS-EX
+           MOVE 'Allows AT END and NOT AT END.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(89)
+           MOVE 'END-WRITE / END-REWRITE' TO WS-EX
+           MOVE 'Terminate WRITE or REWRITE statement.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(90)
+           MOVE '  WRITE REC INVK END-WRITE' TO WS-EX
+           MOVE 'Pattern: END-DELETE, END-SEARCH.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(91)
+           MOVE 'END-CALL' TO WS-EX
+           MOVE 'Terminate a CALL statement.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(92)
+           MOVE '  CALL ''P'' EXCPTN END-CALL' TO WS-EX
+           MOVE 'Required when ON EXCEPTION is used.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(93)
+           MOVE 'END-COMPUTE' TO WS-EX
+           MOVE 'Terminate a COMPUTE statement.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(94)
+           MOVE '  COMPUTE X=A+B SZE ERR EC' TO WS-EX
+           MOVE 'Required when ON SIZE ERROR is used.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(95)
+           MOVE 'END-STRING / END-UNSTRING' TO WS-EX
+           MOVE 'Terminate STRING or UNSTRING.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(96)
+           MOVE '  STRING A DELIMITED SIZE IN' TO WS-EX
+           MOVE 'Required when ON OVERFLOW is used.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(97)
+
+      *-- Miscellaneous --
+           MOVE '--- Miscellaneous -----------' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(98)
+           MOVE 'ACCEPT' TO WS-EX
+           MOVE 'Receive data from environment or user.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(99)
+           MOVE '  ACCEPT WS-DATE FROM DATE' TO WS-EX
+           MOVE 'FROM DATE YYYYMMDD for 4-digit year.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(100)
+           MOVE 'CONTINUE' TO WS-EX
+           MOVE 'No-op placeholder in logic flow.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(101)
+           MOVE '  WHEN OTHER CONTINUE' TO WS-EX
+           MOVE 'Explicit do-nothing branch.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(102)
+           MOVE 'NEXT SENTENCE' TO WS-EX
+           MOVE 'Branch to next sentence (period).' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(103)
+           MOVE '  IF X = 0 NEXT SENTENCE' TO WS-EX
+           MOVE 'Use CONTINUE in new code instead.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(104)
+           MOVE 'ENTRY' TO WS-EX
+           MOVE 'Alternate entry point in a program.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(105)
+           MOVE '  ENTRY ''ALT'' USING LK-PARM' TO WS-EX
+           MOVE 'Caller enters at the named label.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(106)
+           MOVE 'ALTER' TO WS-EX
+           MOVE 'Modify a GO TO target at run time.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(107)
+           MOVE '  ALTER PARA-A TO PROCEED TO' TO WS-EX
+           MOVE 'Obsolete; avoid in new programs.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(108)
+           MOVE 'RELEASE' TO WS-EX
+           MOVE 'Pass a record to the SORT facility.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(109)
+           MOVE '  RELEASE SREC FROM WS-INREC' TO WS-EX
+           MOVE 'Used in SORT INPUT PROCEDURE.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(110)
+           MOVE 'RETURN' TO WS-EX
+           MOVE 'Retrieve sorted record from SORT.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(111)
+           MOVE '  RETURN SF INTO WS-OUT-REC' TO WS-EX
+           MOVE 'Used in SORT OUTPUT PROCEDURE.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(112)
+           MOVE 'OPEN EXTEND' TO WS-EX
+           MOVE 'Open file to append records.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(113)
+           MOVE '  OPEN EXTEND AUDIT-FILE' TO WS-EX
+           MOVE 'Appends after last existing record.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(114)
+
+           GOBACK.
+
+       END PROGRAM COBVERBS.
