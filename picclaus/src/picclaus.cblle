@@ -1,12 +1,12 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. PICCLAUS.
+       AUTHOR.     BOB.
+       DATE-WRITTEN. 2025.
       *==============================================================
       * PICCLAUS - ILE COBOL PICTURE Clause Reference
       * Displays examples and descriptions of all COBOL PIC clauses.
       * F3=Exit, PageDown/PageUp to scroll through the list.
       *==============================================================
-       IDENTIFICATION DIVISION.
-       PROGRAM-ID. PICCLAUS.
-       AUTHOR.     BOB.
-       DATE-WRITTEN. 2025.
 
        ENVIRONMENT DIVISION.
        CONFIGURATION SECTION.
