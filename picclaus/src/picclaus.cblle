@@ -219,7 +219,10 @@
       *--------------------------------------------------------------
        READ-SCREEN.
            READ PICSCRF FORMAT IS 'PICSCR'
-               INDICATORS ARE WS-IND-AREA.
+               INDICATORS ARE WS-IND-AREA
+               AT END
+                   MOVE '1' TO WS-IND-F3
+           END-READ.
 
       *==============================================================
       * Load all PIC clause examples and descriptions.

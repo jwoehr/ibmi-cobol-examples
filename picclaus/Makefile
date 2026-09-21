@@ -111,8 +111,9 @@ cobol: check-params dspf
 	@echo "Building ILE COBOL program $(COBL_MBR)..."
 	$(SYSTEM) "CRTBNDCBL PGM($(LIB)/$(COBL_MBR)) \
 	    SRCSTMF('$(CURDIR)/$(COBL_SRC)') \
-	    DBGVIEW(*SOURCE) REPLACE(*YES)" \
-		TGTCCSID(*JOB)
+	    DBGVIEW(*SOURCE) REPLACE(*YES) \
+        OPTION(*APOST) \
+        TGTCCSID(*JOB)"
 	@echo "ILE COBOL program $(COBL_MBR) created successfully in $(LIB)"
 	@echo ""
 
