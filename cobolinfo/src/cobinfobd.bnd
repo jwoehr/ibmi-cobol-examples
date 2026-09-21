@@ -1,0 +1,15 @@
+/*==============================================================*/
+/* COBINFOBD - Binder language for COBINFOSRV service program   */
+/*                                                              */
+/* In ILE COBOL, only the PROGRAM-ID of the outermost program   */
+/* in a compilation unit is exported as an ILE procedure symbol.*/
+/* Each new topic procedure must be a separate compilation unit  */
+/* (separate PROGRAM-ID) in cobinfosrv.cblle.                   */
+/*                                                              */
+/* Add new PROGRAM-ID names at the END of the STRPGMEXP block   */
+/* to maintain signature compatibility with existing callers.   */
+/*==============================================================*/
+
+ STRPGMEXP PGMLVL(*CURRENT)
+   EXPORT SYMBOL('COBINFOSRV')
+ ENDPGMEXP

@@ -1,0 +1,58 @@
+     A*==============================================================
+     A* COBOLINFO - Display file for COBOL Reference program
+     A* COBSCR record format - dynamic topic header via HDRTOPIC
+     A* F3=Exit  PageDown=Scroll Down  PageUp=Scroll Up
+     A*==============================================================
+     A                                      DSPSIZ(24 80 *DS3)
+     A                                      CA03(03 'Exit')
+     A                                      PAGEDOWN(25)
+     A                                      PAGEUP(26)
+     A*--------------------------------------------------------------
+     A* Main screen record format
+     A*--------------------------------------------------------------
+     A          R COBSCR
+     A            HDRTOPIC      30A  O  1  2DSPATR(HI)
+     A                                      COLOR(WHT)
+     A                                  1 62TIME
+     A                                      COLOR(WHT)
+     A                                  2  2'Page:'
+     A                                      COLOR(YLW)
+     A            PAGENBR        3A  O  2  9COLOR(WHT)
+     A                                  2 13'of'
+     A                                      COLOR(YLW)
+     A            TOTPAGES       3A  O  2 16COLOR(WHT)
+     A                                  3  2'PIC Clause / Example'
+     A                                      DSPATR(HI)
+     A                                      COLOR(TRQ)
+     A                                  3 30'Description'
+     A                                      DSPATR(HI)
+     A                                      COLOR(TRQ)
+     A            LINE01        77A  O  4  2COLOR(GRN)
+     A            LINE02        77A  O  5  2COLOR(GRN)
+     A            LINE03        77A  O  6  2COLOR(GRN)
+     A            LINE04        77A  O  7  2COLOR(GRN)
+     A            LINE05        77A  O  8  2COLOR(GRN)
+     A            LINE06        77A  O  9  2COLOR(GRN)
+     A            LINE07        77A  O 10  2COLOR(GRN)
+     A            LINE08        77A  O 11  2COLOR(GRN)
+     A            LINE09        77A  O 12  2COLOR(GRN)
+     A            LINE10        77A  O 13  2COLOR(GRN)
+     A            LINE11        77A  O 14  2COLOR(GRN)
+     A            LINE12        77A  O 15  2COLOR(GRN)
+     A            LINE13        77A  O 16  2COLOR(GRN)
+     A            LINE14        77A  O 17  2COLOR(GRN)
+     A            LINE15        77A  O 18  2COLOR(GRN)
+     A            LINE16        77A  O 19  2COLOR(GRN)
+     A            LINE17        77A  O 20  2COLOR(GRN)
+     A            LINE18        77A  O 21  2COLOR(GRN)
+     A*--------------------------------------------------------------
+     A* Message field - row 22 for status messages
+     A*--------------------------------------------------------------
+     A            MSGFLD        25A  O 22  2COLOR(YLW)
+     A                                      DSPATR(HI)
+     A                                 23  2'F3=Exit'
+     A                                      COLOR(BLU)
+     A                                 23 12'PgDn=Scroll Down'
+     A                                      COLOR(BLU)
+     A                                 23 30'PgUp=Scroll Up'
+     A                                      COLOR(BLU)

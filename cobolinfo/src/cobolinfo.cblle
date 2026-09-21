@@ -1,0 +1,245 @@
+       PROCESS APOST
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. COBOLINFO.
+       AUTHOR.     BOB.
+       DATE-WRITTEN. 2025.
+      *==============================================================
+      * COBOLINFO - ILE COBOL Reference: interactive 5250 display
+      *
+      * Displays scrollable COBOL reference topics retrieved from the
+      * COBINFOSRV service program.  Display logic is fully separated
+      * from content: content is obtained by calling an exported
+      * procedure in COBINFOSRV.
+      *
+      * Controls:
+      *   F3       - Exit
+      *   PgDn     - Scroll down one page
+      *   PgUp     - Scroll up one page
+      *
+      * Compile:
+      *   CRTBNDCBL PGM(lib/COBOLINFO)
+      *             SRCSTMF('path/cobolinfo.cblle')
+      *             BNDDIR(lib/COBINFOBD)
+      *             DBGVIEW(*SOURCE) OPTION(*APOST)
+      *             TGTCCSID(*JOB)  AUT(*EXCLUDE)
+      *==============================================================
+
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       SOURCE-COMPUTER. IBM-I.
+       OBJECT-COMPUTER. IBM-I.
+       SPECIAL-NAMES.
+           LINKAGE TYPE IS PROCEDURE FOR 'COBINFOSRV'.
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+           SELECT COBSCRF
+               ASSIGN TO WORKSTATION-COBINFODSP
+               ORGANIZATION IS TRANSACTION
+               FILE STATUS IS WS-SCR-STATUS.
+
+       DATA DIVISION.
+       FILE SECTION.
+       FD  COBSCRF.
+       01  COBSCR-REC.
+           COPY DDS-ALL-FORMATS OF COBINFODSP.
+
+       WORKING-STORAGE SECTION.
+       01  WS-SCR-STATUS          PIC XX.
+
+      *--------------------------------------------------------------
+      * Response indicator area - 3 bytes, matching DDS listing:
+      *   *IN03 = byte 1  (CA03  - F3 Exit)
+      *   *IN25 = byte 2  (PAGEDOWN - scroll down)
+      *   *IN26 = byte 3  (PAGEUP   - scroll up)
+      * Each byte is '1' (on) or '0' (off).
+      *--------------------------------------------------------------
+       01  WS-IND-AREA.
+           05  WS-IND-F3          PIC X.
+           05  WS-IND-PGDN        PIC X.
+           05  WS-IND-PGUP        PIC X.
+
+      *--------------------------------------------------------------
+      * Scrolling state
+      * WS-NEW-TOP is SIGNED so subtraction below zero works correctly
+      *--------------------------------------------------------------
+       77  WS-TOP-LINE            PIC 9(3)  COMP-4 VALUE 1.
+       77  WS-TOTAL-LINES         PIC 9(3)  COMP-4 VALUE 0.
+       77  WS-PAGE-SIZE           PIC 9(3)  COMP-4 VALUE 18.
+       77  WS-TOTAL-PAGES         PIC 9(3)  COMP-4 VALUE 0.
+       77  WS-CUR-PAGE            PIC 9(3)  COMP-4 VALUE 0.
+       77  WS-IDX                 PIC 9(3)  COMP-4 VALUE 1.
+       77  WS-LINE-IDX            PIC 9(3)  COMP-4 VALUE 1.
+       77  WS-NEW-TOP             PIC S9(3) COMP-4 VALUE 1.
+       77  WS-PAGE-NUM-EDIT       PIC ZZ9.
+       77  WS-TOTAL-EDIT          PIC ZZ9.
+
+      *--------------------------------------------------------------
+      * Screen output work fields
+      *--------------------------------------------------------------
+       01  WS-SCR-WORK.
+           05  WS-HDRTOPIC        PIC X(30).
+           05  WS-PAGENBR         PIC X(3).
+           05  WS-TOTPAGES        PIC X(3).
+           05  WS-MSGFLD          PIC X(25).
+           05  WS-LINE            PIC X(77)
+               OCCURS 18 TIMES.
+
+      *--------------------------------------------------------------
+      * Topic group item - interface contract with COBINFOSRV.
+      * Identical layout to LINKAGE SECTION in cobinfosrv.cblle.
+      * PICCLAUS-DATA fills WS-TOPIC-COUNT and WS-ENTRY(1..60).
+      *--------------------------------------------------------------
+       01  WS-TOPIC.
+           05  WS-TOPIC-COUNT     PIC 9(3)  COMP-4.
+           05  WS-ENTRY           PIC X(77)
+               OCCURS 60 TIMES.
+
+       PROCEDURE DIVISION.
+       MAIN-SECTION SECTION.
+       MAIN-PARA.
+           MOVE 'COBOL PICTURE Clauses' TO WS-HDRTOPIC
+           CALL 'COBINFOSRV' USING BY REFERENCE WS-TOPIC
+           MOVE WS-TOPIC-COUNT TO WS-TOTAL-LINES
+           PERFORM CALC-PAGES
+           PERFORM OPEN-SCREEN
+           PERFORM SCROLL-LOOP UNTIL WS-IND-F3 = '1'
+           PERFORM CLOSE-SCREEN
+           GOBACK.
+
+      *--------------------------------------------------------------
+      * Open the workstation file
+      *--------------------------------------------------------------
+       OPEN-SCREEN.
+           OPEN I-O COBSCRF
+           IF WS-SCR-STATUS NOT = '00'
+               DISPLAY 'COBSCRF open failed: ' WS-SCR-STATUS
+               GOBACK
+           END-IF.
+
+      *--------------------------------------------------------------
+      * Close the workstation file
+      *--------------------------------------------------------------
+       CLOSE-SCREEN.
+           CLOSE COBSCRF.
+
+      *--------------------------------------------------------------
+      * Main interaction loop - repeat until F3 pressed
+      *--------------------------------------------------------------
+       SCROLL-LOOP.
+           PERFORM FILL-SCREEN
+           PERFORM WRITE-SCREEN
+           MOVE LOW-VALUE TO WS-IND-AREA
+           PERFORM READ-SCREEN
+           EVALUATE TRUE
+               WHEN WS-IND-F3   = '1'
+                   CONTINUE
+               WHEN WS-IND-PGDN = '1'
+                   PERFORM PAGE-DOWN
+               WHEN WS-IND-PGUP = '1'
+                   PERFORM PAGE-UP
+               WHEN OTHER
+                   CONTINUE
+           END-EVALUATE.
+
+      *--------------------------------------------------------------
+      * Page down: advance one page, stop at last page.
+      * If already at bottom, show message and leave position unchanged.
+      *--------------------------------------------------------------
+       PAGE-DOWN.
+           COMPUTE WS-NEW-TOP = WS-TOP-LINE + WS-PAGE-SIZE
+           IF WS-NEW-TOP <= WS-TOTAL-LINES
+               MOVE SPACES         TO WS-MSGFLD
+               MOVE WS-NEW-TOP     TO WS-TOP-LINE
+           ELSE
+               MOVE '*** Already at bottom ***' TO WS-MSGFLD
+           END-IF.
+
+      *--------------------------------------------------------------
+      * Page up: retreat one page.
+      * If already at top, show message and leave position unchanged.
+      *--------------------------------------------------------------
+       PAGE-UP.
+           IF WS-TOP-LINE = 1
+               MOVE '*** Already at top ***' TO WS-MSGFLD
+           ELSE
+               MOVE SPACES TO WS-MSGFLD
+               COMPUTE WS-NEW-TOP = WS-TOP-LINE - WS-PAGE-SIZE
+               IF WS-NEW-TOP >= 1
+                   MOVE WS-NEW-TOP TO WS-TOP-LINE
+               ELSE
+                   MOVE 1 TO WS-TOP-LINE
+               END-IF
+           END-IF.
+
+      *--------------------------------------------------------------
+      * Calculate total pages from total lines and page size
+      *--------------------------------------------------------------
+       CALC-PAGES.
+           COMPUTE WS-TOTAL-PAGES =
+               (WS-TOTAL-LINES + WS-PAGE-SIZE - 1) / WS-PAGE-SIZE.
+
+      *--------------------------------------------------------------
+      * Fill the 18 screen lines from the table at WS-TOP-LINE.
+      * Also updates the page number fields and topic header.
+      *--------------------------------------------------------------
+       FILL-SCREEN.
+           COMPUTE WS-CUR-PAGE =
+               (WS-TOP-LINE + WS-PAGE-SIZE - 1) / WS-PAGE-SIZE
+
+           MOVE WS-CUR-PAGE    TO WS-PAGE-NUM-EDIT
+           MOVE WS-TOTAL-PAGES TO WS-TOTAL-EDIT
+           MOVE WS-PAGE-NUM-EDIT TO WS-PAGENBR
+           MOVE WS-TOTAL-EDIT    TO WS-TOTPAGES
+
+           PERFORM VARYING WS-LINE-IDX FROM 1 BY 1
+                   UNTIL WS-LINE-IDX > WS-PAGE-SIZE
+               COMPUTE WS-IDX = WS-TOP-LINE + WS-LINE-IDX - 1
+               IF WS-IDX <= WS-TOTAL-LINES
+                   MOVE WS-ENTRY(WS-IDX) TO WS-LINE(WS-LINE-IDX)
+               ELSE
+                   MOVE SPACES TO WS-LINE(WS-LINE-IDX)
+               END-IF
+           END-PERFORM.
+
+      *--------------------------------------------------------------
+      * Write the screen record to the display file.
+      * WS-HDRTOPIC was set in MAIN-PARA and remains constant for
+      * this topic; future topics will change it before calling here.
+      *--------------------------------------------------------------
+       WRITE-SCREEN.
+           MOVE WS-HDRTOPIC  TO HDRTOPIC OF COBSCR-REC
+           MOVE WS-PAGENBR   TO PAGENBR  OF COBSCR-REC
+           MOVE WS-TOTPAGES  TO TOTPAGES OF COBSCR-REC
+           MOVE WS-MSGFLD    TO MSGFLD   OF COBSCR-REC
+           MOVE WS-LINE(1)   TO LINE01   OF COBSCR-REC
+           MOVE WS-LINE(2)   TO LINE02   OF COBSCR-REC
+           MOVE WS-LINE(3)   TO LINE03   OF COBSCR-REC
+           MOVE WS-LINE(4)   TO LINE04   OF COBSCR-REC
+           MOVE WS-LINE(5)   TO LINE05   OF COBSCR-REC
+           MOVE WS-LINE(6)   TO LINE06   OF COBSCR-REC
+           MOVE WS-LINE(7)   TO LINE07   OF COBSCR-REC
+           MOVE WS-LINE(8)   TO LINE08   OF COBSCR-REC
+           MOVE WS-LINE(9)   TO LINE09   OF COBSCR-REC
+           MOVE WS-LINE(10)  TO LINE10   OF COBSCR-REC
+           MOVE WS-LINE(11)  TO LINE11   OF COBSCR-REC
+           MOVE WS-LINE(12)  TO LINE12   OF COBSCR-REC
+           MOVE WS-LINE(13)  TO LINE13   OF COBSCR-REC
+           MOVE WS-LINE(14)  TO LINE14   OF COBSCR-REC
+           MOVE WS-LINE(15)  TO LINE15   OF COBSCR-REC
+           MOVE WS-LINE(16)  TO LINE16   OF COBSCR-REC
+           MOVE WS-LINE(17)  TO LINE17   OF COBSCR-REC
+           MOVE WS-LINE(18)  TO LINE18   OF COBSCR-REC
+           WRITE COBSCR-REC FORMAT IS 'COBSCR'.
+
+      *--------------------------------------------------------------
+      * Read the screen; INDICATORS ARE receives the response
+      * indicator bytes back from the display file.
+      *--------------------------------------------------------------
+       READ-SCREEN.
+           READ COBSCRF FORMAT IS 'COBSCR'
+               INDICATORS ARE WS-IND-AREA
+               AT END
+                   MOVE '1' TO WS-IND-F3
+           END-READ.
+
+       END PROGRAM COBOLINFO.
