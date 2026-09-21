@@ -1,0 +1,527 @@
+      *==============================================================
+      * PICCLAUS - ILE COBOL PICTURE Clause Reference
+      * Displays examples and descriptions of all COBOL PIC clauses.
+      * F3=Exit, PageDown/PageUp to scroll through the list.
+      *==============================================================
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. PICCLAUS.
+       AUTHOR.     BOB.
+       DATE-WRITTEN. 2025.
+
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       SOURCE-COMPUTER. IBM-I.
+       OBJECT-COMPUTER. IBM-I.
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+           SELECT PICSCRF
+               ASSIGN TO WORKSTATION-PICCLAUS
+               ORGANIZATION IS TRANSACTION
+               FILE STATUS IS WS-SCR-STATUS.
+
+       DATA DIVISION.
+       FILE SECTION.
+       FD  PICSCRF.
+       01  PICSCR-REC.
+           COPY DDS-ALL-FORMATS OF PICCLAUS.
+
+       WORKING-STORAGE SECTION.
+       01  WS-SCR-STATUS          PIC XX.
+
+      *--------------------------------------------------------------
+      * Response indicator area - 3 bytes, matching DDS listing:
+      *   *IN03 = byte 1  (CA03  - F3 Exit)
+      *   *IN25 = byte 2  (PAGEDOWN - scroll down)
+      *   *IN26 = byte 3  (PAGEUP   - scroll up)
+      * Each byte is X'F1' (on) or X'F0' (off), i.e. '1' or '0'
+      *--------------------------------------------------------------
+       01  WS-IND-AREA.
+           05  WS-IND-F3          PIC X.
+           05  WS-IND-PGDN        PIC X.
+           05  WS-IND-PGUP        PIC X.
+
+      *--------------------------------------------------------------
+      * Scrolling state
+      * WS-NEW-TOP is SIGNED so subtraction below zero works correctly
+      *--------------------------------------------------------------
+       77  WS-TOP-LINE            PIC 9(3)  COMP-4 VALUE 1.
+       77  WS-TOTAL-LINES         PIC 9(3)  COMP-4 VALUE 0.
+       77  WS-PAGE-SIZE           PIC 9(3)  COMP-4 VALUE 18.
+       77  WS-TOTAL-PAGES         PIC 9(3)  COMP-4 VALUE 0.
+       77  WS-CUR-PAGE            PIC 9(3)  COMP-4 VALUE 0.
+       77  WS-IDX                 PIC 9(3)  COMP-4 VALUE 1.
+       77  WS-LINE-IDX            PIC 9(3)  COMP-4 VALUE 1.
+       77  WS-NEW-TOP             PIC S9(3) COMP-4 VALUE 1.
+       77  WS-PAGE-NUM-EDIT       PIC ZZ9.
+       77  WS-TOTAL-EDIT          PIC ZZ9.
+
+      *--------------------------------------------------------------
+      * Screen output work fields
+      *--------------------------------------------------------------
+       01  WS-SCR-WORK.
+           05  WS-PAGENBR         PIC X(3).
+           05  WS-TOTPAGES        PIC X(3).
+           05  WS-MSGFLD          PIC X(25).
+           05  WS-LINE            PIC X(77)
+               OCCURS 18 TIMES.
+
+      *--------------------------------------------------------------
+      * Load helper: example (WS-EX, 27 chars) and description
+      * (WS-DC, 50 chars) moved separately then copied as WS-LOAD
+      * (77 chars) into WS-ENTRY(n).  COBOL pads shorter literals
+      * with spaces on MOVE so no string continuation is needed.
+      *--------------------------------------------------------------
+       01  WS-LOAD.
+           05  WS-EX              PIC X(27).
+           05  WS-DC              PIC X(50).
+
+      *--------------------------------------------------------------
+      * PIC clause data table - 60 entries of 77 chars each
+      *--------------------------------------------------------------
+       01  WS-PIC-TABLE.
+           05  WS-ENTRY           PIC X(77)
+               OCCURS 60 TIMES.
+
+       PROCEDURE DIVISION.
+       MAIN-SECTION SECTION.
+       MAIN-PARA.
+           PERFORM INIT-TABLE
+           PERFORM CALC-PAGES
+           PERFORM OPEN-SCREEN
+           PERFORM SCROLL-LOOP UNTIL WS-IND-F3 = '1'
+           PERFORM CLOSE-SCREEN
+           GOBACK.
+
+      *--------------------------------------------------------------
+      * Open the workstation file
+      *--------------------------------------------------------------
+       OPEN-SCREEN.
+           OPEN I-O PICSCRF
+           IF WS-SCR-STATUS NOT = '00'
+               DISPLAY 'PICSCRF open failed: ' WS-SCR-STATUS
+               GOBACK
+           END-IF.
+
+      *--------------------------------------------------------------
+      * Close the workstation file
+      *--------------------------------------------------------------
+       CLOSE-SCREEN.
+           CLOSE PICSCRF.
+
+      *--------------------------------------------------------------
+      * Main interaction loop - repeat until F3 pressed
+      *--------------------------------------------------------------
+       SCROLL-LOOP.
+           PERFORM FILL-SCREEN
+           PERFORM WRITE-SCREEN
+           MOVE LOW-VALUE TO WS-IND-AREA
+           PERFORM READ-SCREEN
+           EVALUATE TRUE
+               WHEN WS-IND-F3   = '1'
+                   CONTINUE
+               WHEN WS-IND-PGDN = '1'
+                   PERFORM PAGE-DOWN
+               WHEN WS-IND-PGUP = '1'
+                   PERFORM PAGE-UP
+               WHEN OTHER
+                   CONTINUE
+           END-EVALUATE.
+
+      *--------------------------------------------------------------
+      * Page down: advance one page, stop at last page.
+      * If already at bottom, show message and leave position unchanged.
+      *--------------------------------------------------------------
+       PAGE-DOWN.
+           COMPUTE WS-NEW-TOP = WS-TOP-LINE + WS-PAGE-SIZE
+           IF WS-NEW-TOP <= WS-TOTAL-LINES
+               MOVE SPACES         TO WS-MSGFLD
+               MOVE WS-NEW-TOP     TO WS-TOP-LINE
+           ELSE
+               MOVE '*** Already at bottom ***' TO WS-MSGFLD
+           END-IF.
+
+      *--------------------------------------------------------------
+      * Page up: retreat one page.
+      * If already at top, show message and leave position unchanged.
+      *--------------------------------------------------------------
+       PAGE-UP.
+           IF WS-TOP-LINE = 1
+               MOVE '*** Already at top ***' TO WS-MSGFLD
+           ELSE
+               MOVE SPACES TO WS-MSGFLD
+               COMPUTE WS-NEW-TOP = WS-TOP-LINE - WS-PAGE-SIZE
+               IF WS-NEW-TOP >= 1
+                   MOVE WS-NEW-TOP TO WS-TOP-LINE
+               ELSE
+                   MOVE 1 TO WS-TOP-LINE
+               END-IF
+           END-IF.
+
+      *--------------------------------------------------------------
+      * Calculate total pages from total lines and page size
+      *--------------------------------------------------------------
+       CALC-PAGES.
+           COMPUTE WS-TOTAL-PAGES =
+               (WS-TOTAL-LINES + WS-PAGE-SIZE - 1) / WS-PAGE-SIZE.
+
+      *--------------------------------------------------------------
+      * Fill the 18 screen lines from the table at WS-TOP-LINE
+      *--------------------------------------------------------------
+       FILL-SCREEN.
+           COMPUTE WS-CUR-PAGE =
+               (WS-TOP-LINE + WS-PAGE-SIZE - 1) / WS-PAGE-SIZE
+
+           MOVE WS-CUR-PAGE    TO WS-PAGE-NUM-EDIT
+           MOVE WS-TOTAL-PAGES TO WS-TOTAL-EDIT
+           MOVE WS-PAGE-NUM-EDIT TO WS-PAGENBR
+           MOVE WS-TOTAL-EDIT    TO WS-TOTPAGES
+
+           PERFORM VARYING WS-LINE-IDX FROM 1 BY 1
+                   UNTIL WS-LINE-IDX > WS-PAGE-SIZE
+               COMPUTE WS-IDX = WS-TOP-LINE + WS-LINE-IDX - 1
+               IF WS-IDX <= WS-TOTAL-LINES
+                   MOVE WS-ENTRY(WS-IDX) TO WS-LINE(WS-LINE-IDX)
+               ELSE
+                   MOVE SPACES TO WS-LINE(WS-LINE-IDX)
+               END-IF
+           END-PERFORM.
+
+      *--------------------------------------------------------------
+      * Write the screen record to the display file
+      *--------------------------------------------------------------
+       WRITE-SCREEN.
+           MOVE WS-PAGENBR   TO PAGENBR  OF PICSCR-REC
+           MOVE WS-TOTPAGES  TO TOTPAGES OF PICSCR-REC
+           MOVE WS-MSGFLD    TO MSGFLD   OF PICSCR-REC
+           MOVE WS-LINE(1)   TO LINE01   OF PICSCR-REC
+           MOVE WS-LINE(2)   TO LINE02   OF PICSCR-REC
+           MOVE WS-LINE(3)   TO LINE03   OF PICSCR-REC
+           MOVE WS-LINE(4)   TO LINE04   OF PICSCR-REC
+           MOVE WS-LINE(5)   TO LINE05   OF PICSCR-REC
+           MOVE WS-LINE(6)   TO LINE06   OF PICSCR-REC
+           MOVE WS-LINE(7)   TO LINE07   OF PICSCR-REC
+           MOVE WS-LINE(8)   TO LINE08   OF PICSCR-REC
+           MOVE WS-LINE(9)   TO LINE09   OF PICSCR-REC
+           MOVE WS-LINE(10)  TO LINE10   OF PICSCR-REC
+           MOVE WS-LINE(11)  TO LINE11   OF PICSCR-REC
+           MOVE WS-LINE(12)  TO LINE12   OF PICSCR-REC
+           MOVE WS-LINE(13)  TO LINE13   OF PICSCR-REC
+           MOVE WS-LINE(14)  TO LINE14   OF PICSCR-REC
+           MOVE WS-LINE(15)  TO LINE15   OF PICSCR-REC
+           MOVE WS-LINE(16)  TO LINE16   OF PICSCR-REC
+           MOVE WS-LINE(17)  TO LINE17   OF PICSCR-REC
+           MOVE WS-LINE(18)  TO LINE18   OF PICSCR-REC
+           WRITE PICSCR-REC FORMAT IS 'PICSCR'.
+
+      *--------------------------------------------------------------
+      * Read the screen; INDICATORS ARE receives the response
+      * indicator bytes back from the display file.
+      *--------------------------------------------------------------
+       READ-SCREEN.
+           READ PICSCRF FORMAT IS 'PICSCR'
+               INDICATORS ARE WS-IND-AREA.
+
+      *==============================================================
+      * Load all PIC clause examples and descriptions.
+      * Pattern for each entry:
+      *   MOVE 'example' TO WS-EX
+      *   MOVE 'description' TO WS-DC
+      *   MOVE WS-LOAD TO WS-ENTRY(n)
+      * COBOL pads both WS-EX and WS-DC with spaces on MOVE.
+      * No string continuation is used anywhere in this paragraph.
+      *==============================================================
+       INIT-TABLE.
+           MOVE 1 TO WS-TOTAL-LINES
+
+      *-- Alphabetic (A) --
+           MOVE '--- Alphabetic (A) ---' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(1)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC A(10)' TO WS-EX
+           MOVE 'Letters and spaces only.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(2)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC A(2)' TO WS-EX
+           MOVE 'State code: letters and spaces only.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(3)
+
+      *-- Alphanumeric (X) --
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '--- Alphanumeric (X) ---' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(4)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC X(30)' TO WS-EX
+           MOVE 'Any characters: letters, digits, symbols.'
+               TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(5)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC X(1)' TO WS-EX
+           MOVE 'Single character flag or code field.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(6)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC X(80)' TO WS-EX
+           MOVE 'Full-width screen line buffer field.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(7)
+
+      *-- Unsigned numeric (9) --
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '--- Unsigned Numeric (9) ---' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(8)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC 9(5)' TO WS-EX
+           MOVE 'Unsigned integer: 00000 to 99999.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(9)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC 9(9)' TO WS-EX
+           MOVE 'Unsigned integer up to 999999999.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(10)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC 9(7)V99' TO WS-EX
+           MOVE 'Unsigned: 7 integer, 2 decimal places.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(11)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC 99V9' TO WS-EX
+           MOVE 'Short form: 2 integer, 1 decimal place.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(12)
+
+      *-- Signed numeric (S9) --
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '--- Signed Numeric (S9) ---' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(13)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC S9(5)' TO WS-EX
+           MOVE 'Signed integer: -99999 to +99999.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(14)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC S9(9)V99' TO WS-EX
+           MOVE 'Signed: 9 integer + 2 decimal places.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(15)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC S9(9)V99 COMP-3' TO WS-EX
+           MOVE 'Packed decimal; efficient arithmetic.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(16)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC S9(9) COMP-4' TO WS-EX
+           MOVE 'Binary integer; good for counters.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(17)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC S9(9) BINARY' TO WS-EX
+           MOVE 'BINARY is a synonym for COMP-4.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(18)
+
+      *-- Implied decimal (V) --
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '--- Implied Decimal (V) ---' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(19)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC 9(5)V9(2)' TO WS-EX
+           MOVE 'V marks decimal; not stored in the field.'
+               TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(20)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC S9(7)V9(4)' TO WS-EX
+           MOVE 'Signed; 7 integer, 4 decimal places.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(21)
+
+      *-- Scaling (P) --
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '--- Scaling Factor (P) ---' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(22)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC 9(3)PPP' TO WS-EX
+           MOVE 'Scales by 1000: stored value is nnn000.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(23)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC PPP9(3)' TO WS-EX
+           MOVE 'Scales by .001: stored value is .000nnn.'
+               TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(24)
+
+      *-- COMP-1 / COMP-2 floating point --
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '--- Float (COMP-1 / COMP-2)' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(25)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC S9(6)V9 COMP-1' TO WS-EX
+           MOVE 'Single-precision float (4 bytes on IBM i).'
+               TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(26)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC S9(16)V9(7) COMP-2' TO WS-EX
+           MOVE 'Double-precision float (8 bytes on IBM i).'
+               TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(27)
+
+      *-- COMP-5 native binary --
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '--- Native Binary (COMP-5) -' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(28)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC S9(4) COMP-5' TO WS-EX
+           MOVE 'Native binary; no digit-count truncation.'
+               TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(29)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC S9(9) COMP-5' TO WS-EX
+           MOVE 'Full 4-byte native integer value.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(30)
+
+      *-- Edited: zero suppression (Z) --
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '--- Edited: Zero Suppress --' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(31)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC ZZZZ9' TO WS-EX
+           MOVE 'Suppress leading zeros; last digit always shown.'
+               TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(32)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC Z(6)9.99' TO WS-EX
+           MOVE 'Suppress leading zeros with decimal point.'
+               TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(33)
+
+      *-- Edited: asterisk fill (*) --
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '--- Edited: Asterisk Fill --' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(34)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC ***9.99' TO WS-EX
+           MOVE 'Fill leading positions with asterisks.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(35)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC *(6)9.99' TO WS-EX
+           MOVE 'Check-protect: asterisk fill shorthand.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(36)
+
+      *-- Edited: fixed dollar sign ($) --
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '--- Edited: Fixed Dollar ---' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(37)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC $ZZZ,ZZ9.99' TO WS-EX
+           MOVE 'Fixed $ with zero suppression and comma.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(38)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC $9(7).99' TO WS-EX
+           MOVE 'Fixed $ sign: always printed in output.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(39)
+
+      *-- Edited: floating dollar sign ($$) --
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '--- Edited: Floating Dollar ' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(40)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC $$(6)9.99' TO WS-EX
+           MOVE 'Dollar sign floats next to first digit.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(41)
+
+      *-- Edited: sign symbols --
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '--- Edited: Sign Symbols ---' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(42)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC +ZZZ9.99' TO WS-EX
+           MOVE 'Leading +/-: displays sign of value.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(43)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC ZZZ9.99-' TO WS-EX
+           MOVE 'Trailing minus: shows - only if negative.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(44)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC ZZZ9.99+' TO WS-EX
+           MOVE 'Trailing +/-: shows + or - always.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(45)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC Z(7).99CR' TO WS-EX
+           MOVE 'Trailing CR if negative, spaces if positive.'
+               TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(46)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC Z(7).99DB' TO WS-EX
+           MOVE 'Trailing DB if negative, spaces if positive.'
+               TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(47)
+
+      *-- Edited: comma and period --
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '--- Edited: Comma / Period -' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(48)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC ZZZ,ZZ9.99' TO WS-EX
+           MOVE 'Comma grouping separator; period for decimal.'
+               TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(49)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC 9(6),9(3).99' TO WS-EX
+           MOVE 'Explicit comma inserted in picture string.'
+               TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(50)
+
+      *-- Edited: slash and blank (B) --
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '--- Edited: Slash / Blank --' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(51)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC 99/99/9999' TO WS-EX
+           MOVE 'Slash inserts / in output for date display.'
+               TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(52)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC 9(4)B9(2)B9(2)' TO WS-EX
+           MOVE 'B inserts a blank space in output position.'
+               TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(53)
+
+      *-- Edited: zero insertion (0) --
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '--- Edited: Zero Insertion -' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(54)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE 'PIC 999099' TO WS-EX
+           MOVE '0 inserts a literal zero digit in output.'
+               TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(55)
+
+      *-- Level 66 RENAMES --
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '--- Level 66 RENAMES ------' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(56)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '66 NEWNAME RENAMES OLDNAME' TO WS-EX
+           MOVE 'Alias for a range of existing fields.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(57)
+
+      *-- Level 88 condition names --
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '--- Level 88 Conditions ---' TO WS-EX
+           MOVE SPACES TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(58)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '88 FLAG-ON VALUE ''Y''' TO WS-EX
+           MOVE 'Condition name: true when field = Y.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(59)
+           ADD 1 TO WS-TOTAL-LINES
+           MOVE '88 IS-DONE VALUE ''Y'' ''D''' TO WS-EX
+           MOVE 'Multiple values for one condition name.' TO WS-DC
+           MOVE WS-LOAD TO WS-ENTRY(60).
+
+       END PROGRAM PICCLAUS.
+
