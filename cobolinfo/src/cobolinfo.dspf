@@ -7,6 +7,7 @@
      A                                      CA03(03 'Exit')
      A                                      PAGEDOWN(25)
      A                                      PAGEUP(26)
+     A                                      CA05(05 'Next Topic')
      A*--------------------------------------------------------------
      A* Main screen record format
      A*--------------------------------------------------------------
@@ -55,4 +56,6 @@
      A                                 23 12'PgDn=Scroll Down'
      A                                      COLOR(BLU)
      A                                 23 30'PgUp=Scroll Up'
+     A                                      COLOR(BLU)
+     A                                 23 47'F5=Next Topic'
      A                                      COLOR(BLU)

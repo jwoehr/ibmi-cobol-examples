@@ -14,8 +14,11 @@ code.
 ```
 COBOLINFO (*PGM)          -- interactive 5250 display program
     |
-    +-- calls COBINFOSRV      (exported ILE procedure in COBINFOSRV *SRVPGM)
-    |       fills WS-TOPIC group-item: count + 60-entry table
+    +-- calls COBINFOSRV      (PICTURE Clause topic: exported ILE procedure)
+    |       fills WS-TOPIC group-item: count + up to 120-entry table
+    |
+    +-- calls COBVERBS        (Verb Reference topic: exported ILE procedure)
+    |       fills WS-TOPIC group-item: count + up to 120-entry table
     |
     +-- drives COBINFODSP (*FILE, compiled from cobolinfo.dspf)
             COBSCR record format
@@ -37,9 +40,12 @@ Binding is resolved through the `COBINFOBD` binding directory which lists
 | PROGRAM-ID / Symbol | Topic                       | Entries |
 |---------------------|-----------------------------|---------|
 | COBINFOSRV          | COBOL PICTURE Clauses       | 60      |
+| COBVERBS            | COBOL Verbs                 | 114     |
 
 *(More topics will be added as additional `PROGRAM-ID` compilation units in*
 *`cobinfosrv.cblle`, each listed in `cobinfobd.bnd`.)*
+
+The shared `WS-TOPIC` array holds up to 120 entries per topic.
 
 ---
 
@@ -67,6 +73,31 @@ Binding is resolved through the `COBINFOBD` binding directory which lists
 |18 | Level 88 Conditions           | 3       |
 
 Total: 60 entries displayed 18 per page (4 pages).
+
+---
+
+## COBOL Verb Categories
+
+Each verb is shown as a two-line pair: the first line gives the verb name and a
+short description; the second gives an indented example and a brief usage note.
+
+| # | Category          | Verbs Covered                                         | Entries |
+|---|-------------------|-------------------------------------------------------|---------|
+| 1 | Data Movement     | MOVE, INITIALIZE, SET, STRING, UNSTRING               | 11      |
+| 2 | Arithmetic        | ADD, SUBTRACT, MULTIPLY, DIVIDE, COMPUTE              | 11      |
+| 3 | Control Flow      | PERFORM, IF/ELSE/END-IF, EVALUATE, GO TO, STOP RUN    | 11      |
+| 4 | Input / Output    | OPEN, CLOSE, READ, WRITE, REWRITE, DELETE             | 13      |
+| 5 | Table Handling    | SEARCH, SEARCH ALL, SORT, MERGE                       | 9       |
+| 6 | Program Linkage   | CALL, CANCEL, GOBACK, EXIT PROGRAM                    | 9       |
+| 7 | Exception / Debug | INSPECT, ON EXCEPTION, ON SIZE ERROR, DISPLAY         | 9       |
+| 8 | String Handling   | MOVE SPACES, MOVE ZEROS, MOVE CORRESPONDING           | 7       |
+| 9 | Scope Terminators | END-IF, END-EVALUATE, END-PERFORM, END-READ,          | 17      |
+|   |                   | END-WRITE/END-REWRITE, END-CALL, END-COMPUTE,         |         |
+|   |                   | END-STRING/END-UNSTRING                               |         |
+|10 | Miscellaneous     | ACCEPT, CONTINUE, NEXT SENTENCE, ENTRY, ALTER,        | 17      |
+|   |                   | RELEASE, RETURN, OPEN EXTEND                          |         |
+
+Total: 114 entries (7 pages of 18, with 6 lines on page 7, plus category headers).
 
 ---
 
@@ -128,4 +159,9 @@ make help
 CALL LIB/COBOLINFO
 ```
 
-Use `F3` to exit, `PgDn` / `PgUp` to scroll through the reference.
+| Key   | Action                                              |
+|-------|-----------------------------------------------------|
+| F3    | Exit                                                |
+| F5    | Next Topic (cycles: PICTURE Clauses → Verbs → ...)  |
+| PgDn  | Scroll down one page                                |
+| PgUp  | Scroll up one page                                  |
