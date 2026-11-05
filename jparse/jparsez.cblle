@@ -1,0 +1,60 @@
+       IDENTIFICATION DIVISION.
+         PROGRAM-ID. JPARSEZ.
+       DATA DIVISION.
+
+       WORKING-STORAGE SECTION.
+
+       01 JSON-CLIENT-DATA.
+        03 PIC X(02) value '{'.
+        03 PIC X(11) value ' "CLIENT":{'.
+        03 PIC X(18) value ' "CLIENTID": 1047,'.
+        03 PIC X(22) value ' "CLIENTNAME": "Alice"'.
+        03 PIC X(04) value '},'.
+        03 PIC X(18) value ' "TRANSACTIONS": ['.
+        03 PIC X(42) value ' {"DATE": "2026-10-01", "AMOUNT": 100},'.
+        03 PIC X(41) value ' {"DATE": "2026-10-02", "AMOUNT": 20}'.
+        03 PIC X(03) value '  ]'.
+        03 PIC X(01) value '}'.
+
+       01 JSON-UTF8 PIC X(1000) value is all x'20'.
+
+       01  CLIENT-DATA.
+          03 CLIENT.
+             05 CLIENTID      PIC 9(9).
+             05 CLIENTNAME    PIC X(50).
+          03 TRANSACTIONS OCCURS 2 TIMES.
+             05 TRANDATE      PIC X(10).
+             05 TRANAMOUNT    PIC 9(5).
+
+       PROCEDURE DIVISION.
+           DISPLAY "JSON-CLIENT-DATA" JSON-CLIENT-DATA
+           JSON PARSE JSON-UTF8 INTO CLIENT-DATA
+              WITH DETAIL
+                NAME OF CLIENT-DATA IS OMITTED
+                        TRANDATE IS "DATE"
+                        TRANAMOUNT IS "AMOUNT"
+                ON EXCEPTION
+                     DISPLAY "Error parsing JSON data."
+                     DISPLAY "JSON CODE: " JSON-CODE
+                     DISPLAY "JSON STATUS: " JSON-STATUS
+                     STOP RUN
+                 NOT ON EXCEPTION
+                     DISPLAY "Successful JSON Parse"
+           END-JSON.
+
+           Display "Client Information: "
+           Display "  ID:   "  CLIENTID
+           Display "  NAME: "  CLIENTNAME
+
+           Display "Transactions:"
+           Display "  Record 1:"
+           Display "    DATE:   " TRANDATE(1)
+           Display "    AMOUNT: " TRANAMOUNT(1)
+
+           Display "  Record 2:"
+           Display "    DATE:   " TRANDATE(2)
+           Display "    AMOUNT: " TRANAMOUNT(2)
+
+           Goback.
+       End program JPARSEZ.
+

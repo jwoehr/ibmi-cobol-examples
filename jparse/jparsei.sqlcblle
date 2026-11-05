@@ -1,0 +1,122 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. JPARSEI.
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+
+       01 JSON-CLIENT-DATA.
+        03 PIC X(02) value '{'.
+        03 PIC X(11) value ' "CLIENT":{'.
+        03 PIC X(18) value ' "CLIENTID": 1047,'.
+        03 PIC X(22) value ' "CLIENTNAME": "Alice"'.
+        03 PIC X(04) value '},'.
+        03 PIC X(18) value ' "TRANSACTIONS": ['.
+        03 PIC X(42) value ' {"DATE": "2026-10-01", "AMOUNT": 100},'.
+        03 PIC X(41) value ' {"DATE": "2026-10-02", "AMOUNT": 20}'.
+        03 PIC X(03) value '  ]'.
+        03 PIC X(01) value '}'.
+
+       01  CLIENT-DATA.
+          03 CLIENT.
+             05 CLIENTID      PIC 9(9).
+             05 CLIENTNAME    PIC X(50).
+          03 TRANSACTIONS OCCURS 2 TIMES.
+             05 TRANDATE      PIC X(10).
+             05 TRANAMOUNT    PIC 9(5).
+
+       01 TRAN-IDX            PIC 9(4) COMP VALUE 1.
+
+           EXEC SQL SET OPTION COMMIT = *NONE END-EXEC.
+
+           EXEC SQL INCLUDE SQLCA END-EXEC.
+           
+           EXEC SQL BEGIN DECLARE SECTION END-EXEC.
+       01 SQL-JSON-DATA       PIC X(1000).
+       01 SQL-CLIENTID        PIC S9(9) COMP-3.
+       01 SQL-CLIENTNAME      PIC X(50).
+       01 SQL-TRANDATE        PIC X(10).
+       01 SQL-TRANAMOUNT      PIC S9(5) COMP-3.
+           EXEC SQL END DECLARE SECTION END-EXEC.
+
+       PROCEDURE DIVISION.
+           DISPLAY "JSON-CLIENT-DATA" JSON-CLIENT-DATA
+           
+           MOVE JSON-CLIENT-DATA TO SQL-JSON-DATA.
+
+           EXEC SQL
+                DECLARE JSON_CUR CURSOR FOR
+                SELECT CLIENTID, CLIENTNAME, TRANDATE, TRANAMOUNT
+                  FROM JSON_TABLE(:SQL-JSON-DATA, "$"
+                       COLUMNS (
+                         CLIENTID   DECIMAL(9, 0) 
+                                    PATH "$.CLIENT.CLIENTID",
+                         CLIENTNAME VARCHAR(50)   
+                                    PATH "$.CLIENT.CLIENTNAME",
+                         NESTED PATH "$.TRANSACTIONS[*]"
+                           COLUMNS (
+                             TRANDATE   VARCHAR(10)   
+                                        PATH "$.DATE",
+                             TRANAMOUNT DECIMAL(5, 0) 
+                                        PATH "$.AMOUNT"
+                           )
+                       )
+                     ) AS JT
+           END-EXEC.
+
+           EXEC SQL
+                OPEN JSON_CUR
+           END-EXEC.
+
+           IF SQLCODE NOT = 0
+              DISPLAY "Error opening cursor."
+              DISPLAY "SQLCODE: " SQLCODE
+              STOP RUN
+           END-IF.
+
+           MOVE 1 TO TRAN-IDX.
+           PERFORM UNTIL SQLCODE NOT = 0 OR TRAN-IDX > 2
+              EXEC SQL
+                   FETCH JSON_CUR INTO :SQL-CLIENTID,
+                                       :SQL-CLIENTNAME,
+                                       :SQL-TRANDATE,
+                                       :SQL-TRANAMOUNT
+              END-EXEC
+              
+              IF SQLCODE = 0
+                 IF TRAN-IDX = 1
+                    MOVE SQL-CLIENTID TO CLIENTID
+                    MOVE SQL-CLIENTNAME TO CLIENTNAME
+                 END-IF
+                 MOVE SQL-TRANDATE TO TRANDATE(TRAN-IDX)
+                 MOVE SQL-TRANAMOUNT TO TRANAMOUNT(TRAN-IDX)
+                 ADD 1 TO TRAN-IDX
+              END-IF
+           END-PERFORM.
+
+           EXEC SQL
+                CLOSE JSON_CUR
+           END-EXEC.
+
+           IF TRAN-IDX > 1
+              DISPLAY "Successful JSON Parse via SQL"
+           ELSE
+              DISPLAY "Error fetching JSON data."
+              DISPLAY "SQLCODE: " SQLCODE
+           END-IF.
+
+           Display "Client Information: "
+           Display "  ID:   "  CLIENTID
+           Display "  NAME: "  CLIENTNAME
+
+           Display "Transactions:"
+           Display "  Record 1:"
+           Display "    DATE:   " TRANDATE(1)
+           Display "    AMOUNT: " TRANAMOUNT(1)
+
+           Display "  Record 2:"
+           Display "    DATE:   " TRANDATE(2)
+           Display "    AMOUNT: " TRANAMOUNT(2)
+
+           Goback.
+       End program JPARSEI.
