@@ -1,0 +1,14 @@
+jparse/jparsei.sqlcblle
+  h_00d79582c3c048 7-11,127-129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ea668e584a5bee70ddc8fb88ba2cc5f3612d9d57",
+  "prompts": {},
+  "humans": {
+    "h_00d79582c3c048": {
+      "author": "Jack Woehr <jwoehr@softwoehr.com>"
+    }
+  }
+}
