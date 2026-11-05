@@ -1,0 +1,14 @@
+jparse/README.md
+  h_00d79582c3c048 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "df57ba0424be3beb58b9ff24b5d78382606f2ba6",
+  "prompts": {},
+  "humans": {
+    "h_00d79582c3c048": {
+      "author": "Jack Woehr <jwoehr@softwoehr.com>"
+    }
+  }
+}
