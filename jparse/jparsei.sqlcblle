@@ -1,4 +1,30 @@
        IDENTIFICATION DIVISION.
+      ******************************************************************
+      * Program:     JPARSEI
+      * Source:      jparsei.sqlcblle
+      * Description: Demonstrate parsing a JSON string into a COBOL
+      *              data structure using Db2 for i SQL JSON_TABLE with
+      *              a declared cursor. The program decodes a hardcoded
+      *              JSON payload containing a client record and two
+      *              transaction rows, fetches each row via the cursor,
+      *              populates a COBOL working-storage structure, and
+      *              displays the resulting field values.
+      *
+      * Copyright 2026 Jack Woehr <jwoehr@softwoehr.com>
+      *
+      * Licensed under the Apache License, Version 2.0 (the "License");
+      * you may not use this file except in compliance with the License.
+      * You may obtain a copy of the License at
+      *
+      *     http://www.apache.org/licenses/LICENSE-2.0
+      *
+      * Unless required by applicable law or agreed to in writing,
+      * software distributed under the License is distributed on an
+      * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+      * either express or implied. See the License for the specific
+      * language governing permissions and limitations under the License.
+      ******************************************************************
+
        PROGRAM-ID. JPARSEI.
        ENVIRONMENT DIVISION.
        CONFIGURATION SECTION.
