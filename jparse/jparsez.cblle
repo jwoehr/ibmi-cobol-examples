@@ -1,4 +1,5 @@
        IDENTIFICATION DIVISION.
+      * from a question on IBM Community
          PROGRAM-ID. JPARSEZ.
        DATA DIVISION.
 
