@@ -1,0 +1,16 @@
+jparse/Makefile
+  h_00d79582c3c048 1-9
+jparse/jparsez.cblle
+  h_00d79582c3c048 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87455f04ac1daa427c860fe1a6ff1eb8b3c39ff7",
+  "prompts": {},
+  "humans": {
+    "h_00d79582c3c048": {
+      "author": "Jack Woehr <jwoehr@softwoehr.com>"
+    }
+  }
+}
