@@ -4,6 +4,11 @@
        CONFIGURATION SECTION.
        DATA DIVISION.
        WORKING-STORAGE SECTION.
+      * The CL command to delay execution for 5 seconds
+       01  WS-COMMAND     PIC X(30) VALUE 'DLYJOB DLY(5)'.
+      * Length of the command string defined as packed decimal (COMP-3)
+      * with 5 digits and 4 decimal places (standard QCMDEXC length format)
+       01  WS-CMD-LEN     PIC S9(10)V9(5) COMP-3 VALUE 13.
 
        01 JSON-CLIENT-DATA.
         03 PIC X(02) value '{'.
@@ -119,5 +124,8 @@
            Display '    DATE:   ' TRANDATE(2)
            Display '    AMOUNT: ' TRANAMOUNT(2)
 
+      * Call QCMDEXC to execute the DLYJOB CL command
+           CALL 'QCMDEXC' USING WS-COMMAND
+                                WS-CMD-LEN
            Goback.
        End program JPARSEI.
