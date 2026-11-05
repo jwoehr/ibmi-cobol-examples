@@ -40,7 +40,8 @@
            EXEC SQL END DECLARE SECTION END-EXEC.
 
        PROCEDURE DIVISION.
-           DISPLAY "JSON-CLIENT-DATA" JSON-CLIENT-DATA
+       MAINLINE.
+           DISPLAY 'JSON-CLIENT-DATA' JSON-CLIENT-DATA
            
            MOVE JSON-CLIENT-DATA TO SQL-JSON-DATA.
 
@@ -69,8 +70,8 @@
            END-EXEC.
 
            IF SQLCODE NOT = 0
-              DISPLAY "Error opening cursor."
-              DISPLAY "SQLCODE: " SQLCODE
+              DISPLAY 'Error opening cursor.'
+              DISPLAY 'SQLCODE: ' SQLCODE
               STOP RUN
            END-IF.
 
@@ -99,24 +100,24 @@
            END-EXEC.
 
            IF TRAN-IDX > 1
-              DISPLAY "Successful JSON Parse via SQL"
+              DISPLAY 'Successful JSON Parse via SQL'
            ELSE
-              DISPLAY "Error fetching JSON data."
-              DISPLAY "SQLCODE: " SQLCODE
+              DISPLAY 'Error fetching JSON data.'
+              DISPLAY 'SQLCODE: ' SQLCODE
            END-IF.
 
-           Display "Client Information: "
-           Display "  ID:   "  CLIENTID
-           Display "  NAME: "  CLIENTNAME
+           Display 'Client Information: '
+           Display '  ID:   '  CLIENTID
+           Display '  NAME: '  CLIENTNAME
 
-           Display "Transactions:"
-           Display "  Record 1:"
-           Display "    DATE:   " TRANDATE(1)
-           Display "    AMOUNT: " TRANAMOUNT(1)
+           Display 'Transactions:'
+           Display '  Record 1:'
+           Display '    DATE:   ' TRANDATE(1)
+           Display '    AMOUNT: ' TRANAMOUNT(1)
 
-           Display "  Record 2:"
-           Display "    DATE:   " TRANDATE(2)
-           Display "    AMOUNT: " TRANAMOUNT(2)
+           Display '  Record 2:'
+           Display '    DATE:   ' TRANDATE(2)
+           Display '    AMOUNT: ' TRANAMOUNT(2)
 
            Goback.
        End program JPARSEI.
