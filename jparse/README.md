@@ -12,8 +12,8 @@ Deploy this workspace to your IBM i system to build the examples. Use the
 provided [Makefile](Makefile) to compile the programs from a PASE shell (such as
 an SSH session).
 
-By default, the `Makefile` builds into the `JWOEHR` object library and expects
-the source in `/home/jwoehr/builds/ibmi-cobol-examples/jparse`. You can override
+By default, the `Makefile` builds into the `MYLIB` object library and expects
+the source in `/home/MYUSER/builds/ibmi-cobol-examples/jparse`. You can override
 these locations by setting the `OBJLIB` and `SRCDIR` variables when you run
 `gmake`.
 

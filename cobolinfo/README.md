@@ -11,7 +11,7 @@ code.
 
 ## Architecture
 
-```
+```text
 COBOLINFO (*PGM)          -- interactive 5250 display program
     |
     +-- calls COBINFOSRV      (PICTURE Clause topic: exported ILE procedure)

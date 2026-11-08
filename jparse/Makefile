@@ -1,5 +1,5 @@
-OBJLIB ?= JWOEHR
-SRCDIR ?= /home/jwoehr/builds/ibmi-cobol-examples/jparse
+OBJLIB ?= MYLIB
+SRCDIR ?= /home/MYUSER/builds/ibmi-cobol-examples/jparse
 
 .PHONY: all jparsei
 

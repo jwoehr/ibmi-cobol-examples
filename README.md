@@ -7,11 +7,10 @@ examples, and are not production code**. See LICENSE for limit of liability.
 ## Purpose of the project
 
 This project demonstrates usage of agentic code assist to code modern COBOL
-projects on IBM i. The author's intent is to continue to add examples based on
-the original content.
+projects on IBM i. I intend to continue to add examples.
 
-It is focused on the mechanics of writing modern ILE COBOL rather than useful
-tools. These are examples of technique rather than of content.
+The project is focused on the mechanics of writing modern ILE COBOL rather than
+provinding tools. These are examples of technique rather than of content.
 
 ## Contents of the project
 
@@ -33,8 +32,8 @@ This ILE COBOL program + service program + display file project extends the
 
 ### `jparse`
 
-This section provides COBOL examples demonstrating how to parse JSON with
-sections using `JSON PARSE`, including an example converted for IBM i COBOL.
+These are two COBOL examples which parse JSON, starting with using `JSON PARSE`
+on z/OS COBOL followed by IBM i COBOL using IBM i Db2 SQL's `JSON_TABLE`.
 
 ## Usage
 
